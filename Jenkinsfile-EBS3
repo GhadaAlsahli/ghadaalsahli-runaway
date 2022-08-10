@@ -18,7 +18,7 @@ pipeline {
 		stage('Build') {
 
 			steps {
-				sh 'docker build -t ghadamu/dojo-jump:latest .'
+				sh 'docker build -t ghadamu/ghada:latest .'
 			}
 		}
 
@@ -32,7 +32,7 @@ pipeline {
 		stage('Push') {
 
 			steps {
-				sh 'docker push ghadamu/dojo-jump:latest'
+				sh 'docker push ghadamu/ghada:latest'
 			}
 		}
 
