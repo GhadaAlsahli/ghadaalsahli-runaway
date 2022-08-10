@@ -18,7 +18,7 @@ pipeline {
     stage('Build') {
 
       steps {
-        sh 'docker build -t ghadamu/ghada:latest .'
+        sh 'sudo docker build -t ghadamu/ghada:latest .'
       }
     }
 
