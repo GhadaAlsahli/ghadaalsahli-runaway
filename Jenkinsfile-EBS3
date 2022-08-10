@@ -1,70 +1,53 @@
 pipeline {
-    agent any
-    environment {
-        AWS_ACCESS_KEY_ID     = credentials('ghada-aws-secret-key-id')
-        AWS_SECRET_ACCESS_KEY = credentials('ghada-aws-secret-access-key')
-        ARTIFACT_NAME = 'hello-world.war' 
-        AWS_S3_BUCKET = 'ghadaalsahli-belt2d2-artifacts-123456'
-        AWS_EB_APP_NAME = 'GHADA_Alsahli_belt_exam'
-        AWS_EB_ENVIRONMENT = 'Ghadaalsahlibeltexam-env'
+
+	agent any
+
+	environment {
+		DOCKERHUB_CREDENTIALS=credentials('ghadamu')
+		AWS_ACCESS_KEY_ID     = credentials('ghada-jenkins-Access-key-ID')
+  		AWS_SECRET_ACCESS_KEY = credentials('ghada-jenkins-Secret-access-key')
+		ARTIFACT_NAME = 'Dockerrun.aws.json'
+		AWS_S3_BUCKET = 'ghada-belt2-artifacts-123456'
+		AWS_EB_APP_NAME = 'ghada-eb-belt4'
+        AWS_EB_ENVIRONMENT_NAME = 'Ghadaebbelt4-env'
         AWS_EB_APP_VERSION = "${BUILD_ID}"
-    } 
-    stages {
-        stage('Validate') {
-            steps {
-                
-                sh "mvn validate"
+	}
 
-                sh "mvn clean"
+	stages {
 
-            }
-        }
+		stage('Build') {
 
-         stage('Build') {
-            steps {
-                
-                sh "mvn compile"
+			steps {
+				sh 'docker build -t ghadamu/dojo-jump:latest .'
+			}
+		}
 
-            }
-        }
+		stage('Login') {
 
-        stage('Test') {
-            steps {
-                
-                sh "mvn test"
+			steps {
+				sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+			}
+		}
 
-            }
+		stage('Push') {
 
-            post {
-                always {
-                    junit '**/target/surefire-reports/TEST-*.xml'
-                }
-            }
-        }
-
-        stage('Package') {
-            steps {
-                
-                sh "mvn package"
-
-            }
-
-            post {
-                success {
-                    archiveArtifacts artifacts: '**/target/**.war', followSymlinks: false
-                    sh 'aws configure set region us-east-1'
-                    sh 'aws s3 cp ./target/**.war s3://$AWS_S3_BUCKET/$ARTIFACT_NAME'
-                }
-            }
-        }
+			steps {
+				sh 'docker push ghadamu/dojo-jump:latest'
+			}
+		}
 
         stage('Deploy') {
             steps {
-
+                sh 'aws configure set region us-east-1	'
                 sh 'aws elasticbeanstalk create-application-version --application-name $AWS_EB_APP_NAME --version-label $AWS_EB_APP_VERSION --source-bundle S3Bucket=$AWS_S3_BUCKET,S3Key=$ARTIFACT_NAME'
-
-                sh 'aws elasticbeanstalk update-environment --application-name $AWS_EB_APP_NAME --environment-name $AWS_EB_ENVIRONMENT --version-label $AWS_EB_APP_VERSION'
+                sh 'aws elasticbeanstalk update-environment --application-name $AWS_EB_APP_NAME --environment-name $AWS_EB_ENVIRONMENT_NAME --version-label $AWS_EB_APP_VERSION'
             }
-        }
+	}
     }
+	post {
+		always {
+			sh 'docker logout'
+		}
+	}
+
 }
